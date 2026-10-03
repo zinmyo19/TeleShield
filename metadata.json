@@ -1,0 +1,6 @@
+{
+  "name": "TeleShield",
+  "description": "Secure Telegram fork featuring encrypted secret chats, self-destructing messages, custom security themes, stream player, and Android TV Box D-pad navigation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
