@@ -4,10 +4,12 @@ import com.example.data.local.AudioStreamDao
 import com.example.data.local.ChatDao
 import com.example.data.local.InsightDao
 import com.example.data.local.MessageDao
+import com.example.data.local.UserProfileDao
 import com.example.data.model.AudioStreamEntity
 import com.example.data.model.ChatEntity
 import com.example.data.model.DailyInsightEntity
 import com.example.data.model.MessageEntity
+import com.example.data.model.UserProfileEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -55,12 +57,15 @@ class TeleShieldRepository(
     private val messageDao: MessageDao,
     private val audioStreamDao: AudioStreamDao,
     private val insightDao: InsightDao,
+    private val userProfileDao: UserProfileDao,
     private val scope: CoroutineScope
 ) {
     val allChats: Flow<List<ChatEntity>> = chatDao.getAllChats()
     val secretChats: Flow<List<ChatEntity>> = chatDao.getSecretChats()
     val allAudioStreams: Flow<List<AudioStreamEntity>> = audioStreamDao.getAllStreams()
     val latestInsight: Flow<DailyInsightEntity?> = insightDao.getLatestInsight()
+    val userProfile: Flow<UserProfileEntity?> = userProfileDao.observeUserProfile()
+    val activeMessageCount: Flow<Int> = messageDao.getActiveMessageCount()
 
     private val _privacySettings = MutableStateFlow(UserPrivacySettings())
     val privacySettings: StateFlow<UserPrivacySettings> = _privacySettings.asStateFlow()
@@ -85,6 +90,10 @@ class TeleShieldRepository(
     }
 
     private suspend fun seedInitialDataIfEmpty() {
+        if (userProfileDao.getProfileCount() == 0) {
+            userProfileDao.insertOrUpdateProfile(UserProfileEntity())
+        }
+
         if (chatDao.getChatCount() > 0) return
 
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -107,20 +116,54 @@ class TeleShieldRepository(
         val sampleStreams = listOf(
             AudioStreamEntity(
                 id = 1,
+                title = "DEF CON Keynote: Zero-Day & Quantum Defense",
+                channelOrArtist = "DEF CON Security Media",
+                description = "Live high-definition encrypted video broadcast covering zero-day exploits, hardware sandboxing, and post-quantum cryptographic primitives.",
+                streamType = "VIDEO_STREAM",
+                durationSeconds = 5400,
+                bitRateKbps = 6000,
+                isLossless = true,
+                isPremiumOnly = false,
+                listenersCount = 8420,
+                artworkColorHex = 0xFF00E5FF,
+                category = "Live Video Stream",
+                isVideo = true,
+                videoResolution = "4K 60fps"
+            ),
+            AudioStreamEntity(
+                id = 2,
+                title = "Cyber Threat Intelligence Live Video Feed",
+                channelOrArtist = "Shield Surveillance Team",
+                description = "Real-time satellite & network telemetry video monitoring global ransomware outbreaks and DDOS traffic maps.",
+                streamType = "VIDEO_STREAM",
+                durationSeconds = 7200,
+                bitRateKbps = 4500,
+                isLossless = true,
+                isPremiumOnly = true,
+                listenersCount = 3120,
+                artworkColorHex = 0xFFFF1744,
+                category = "Live Video Stream",
+                isVideo = true,
+                videoResolution = "1080p 60fps"
+            ),
+            AudioStreamEntity(
+                id = 3,
                 title = "CyberSec Underground Radio",
                 channelOrArtist = "Anonymous Operations",
-                description = "24/7 Encrypted secure stream discussing zero-day vulnerabilities, decentralized networking, and privacy toolchains.",
+                description = "24/7 Encrypted secure audio stream discussing zero-day vulnerabilities, decentralized networking, and privacy toolchains.",
                 streamType = "LIVE_STREAM",
                 durationSeconds = 3600,
                 bitRateKbps = 320,
                 isLossless = true,
                 isPremiumOnly = false,
                 listenersCount = 3840,
-                artworkColorHex = 0xFF00E5FF,
-                category = "Live Dispatch"
+                artworkColorHex = 0xFF00E676,
+                category = "Live Audio Dispatch",
+                isVideo = false,
+                videoResolution = "Audio Only"
             ),
             AudioStreamEntity(
-                id = 2,
+                id = 4,
                 title = "Shieldcast: Whistleblower Audio Archives",
                 channelOrArtist = "Freedom of Press Vault",
                 description = "Lossless E2E voice reports from investigative journalists across high-surveillance zones.",
@@ -130,11 +173,13 @@ class TeleShieldRepository(
                 isLossless = true,
                 isPremiumOnly = true,
                 listenersCount = 1920,
-                artworkColorHex = 0xFF00E676,
-                category = "Encrypted Podcast"
+                artworkColorHex = 0xFF00F5D4,
+                category = "Encrypted Podcast",
+                isVideo = false,
+                videoResolution = "Audio Only"
             ),
             AudioStreamEntity(
-                id = 3,
+                id = 5,
                 title = "Lo-Fi Cipher Beats to Code By",
                 channelOrArtist = "DefCon Chill Studio",
                 description = "Ambient low-frequency audio stream designed for terminal coding and confidential analysis.",
@@ -145,21 +190,9 @@ class TeleShieldRepository(
                 isPremiumOnly = false,
                 listenersCount = 5120,
                 artworkColorHex = 0xFF7C4DFF,
-                category = "Ambient Streams"
-            ),
-            AudioStreamEntity(
-                id = 4,
-                title = "Decentralized Mesh & P2P Protocols",
-                channelOrArtist = "TeleShield Devs",
-                description = "Deep dive into onion routing, metadata scrubbing, and forward secrecy implementations.",
-                streamType = "PODCAST",
-                durationSeconds = 2100,
-                bitRateKbps = 320,
-                isLossless = true,
-                isPremiumOnly = true,
-                listenersCount = 980,
-                artworkColorHex = 0xFFFFD600,
-                category = "Technical Architecture"
+                category = "Ambient Streams",
+                isVideo = false,
+                videoResolution = "Audio Only"
             )
         )
         audioStreamDao.insertStreams(sampleStreams)
@@ -328,6 +361,7 @@ class TeleShieldRepository(
 
     suspend fun sendMessage(chatId: Long, text: String, isSecretChat: Boolean, selfDestructSec: Int) {
         val now = System.currentTimeMillis()
+        val cryptoBundle = com.example.security.SecurityCryptoEngine.encryptPayload(text)
         val message = MessageEntity(
             chatId = chatId,
             senderName = "You",
@@ -337,13 +371,29 @@ class TeleShieldRepository(
             isEncrypted = isSecretChat,
             selfDestructSeconds = selfDestructSec,
             openedTimestamp = if (selfDestructSec > 0) now else 0L,
-            mediaType = "TEXT"
+            mediaType = "TEXT",
+            encryptedPayload = cryptoBundle.ciphertext,
+            integrityHmacHex = cryptoBundle.hmac
         )
         messageDao.insertMessage(message)
         chatDao.updateLastMessage(chatId, text, now)
 
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         insightDao.incrementEncryptedMessages(today)
+    }
+
+    suspend fun purgeChatHistory(chatId: Long) {
+        messageDao.clearChatMessages(chatId)
+        chatDao.updateLastMessage(chatId, "Chat history securely wiped.", System.currentTimeMillis())
+    }
+
+    suspend fun updateUserProfile(displayName: String, bio: String) {
+        userProfileDao.updateProfileInfo(displayName, bio)
+    }
+
+    suspend fun rotateIdentityKey() {
+        val newKey = com.example.security.SecurityCryptoEngine.generateIdentityKey()
+        userProfileDao.rotateIdentityKey(newKey, System.currentTimeMillis())
     }
 
     suspend fun markMessageRead(messageId: Long) {

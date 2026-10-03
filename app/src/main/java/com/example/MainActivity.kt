@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
             messageDao = database.messageDao(),
             audioStreamDao = database.audioStreamDao(),
             insightDao = database.insightDao(),
+            userProfileDao = database.userProfileDao(),
             scope = lifecycleScope
         )
         val playerController = MediaPlayerController(lifecycleScope, repository)
@@ -119,6 +120,8 @@ fun TeleShieldApp(viewModel: TeleShieldViewModel) {
     val subscriptionTier by viewModel.subscriptionTier.collectAsState()
     val activeSessions by viewModel.activeSessions.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val userProfile by viewModel.userProfile.collectAsState()
+    val activeMessageCount by viewModel.activeMessageCount.collectAsState()
 
     // Dialog state collectors
     val isFingerprintDialogVisible by viewModel.isFingerprintDialogVisible.collectAsState()
@@ -222,8 +225,12 @@ fun TeleShieldApp(viewModel: TeleShieldViewModel) {
                                     privacySettings = privacySettings,
                                     activeSessions = activeSessions,
                                     currentTheme = themeMode,
+                                    userProfile = userProfile,
+                                    activeMessageCount = activeMessageCount,
                                     onUpdateSettings = { viewModel.updatePrivacySettings(it) },
                                     onSelectTheme = { viewModel.setTheme(it) },
+                                    onUpdateProfile = { name, bio -> viewModel.updateUserProfile(name, bio) },
+                                    onRotateKey = { viewModel.rotateIdentityKey() },
                                     onTerminateSession = { viewModel.terminateSession(it) },
                                     onTerminateAllOtherSessions = { viewModel.terminateAllOtherSessions() },
                                     onOpenTimerDialog = { viewModel.toggleTimerDialog(true) }

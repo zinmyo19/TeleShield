@@ -8,15 +8,17 @@ import com.example.data.model.AudioStreamEntity
 import com.example.data.model.ChatEntity
 import com.example.data.model.DailyInsightEntity
 import com.example.data.model.MessageEntity
+import com.example.data.model.UserProfileEntity
 
 @Database(
     entities = [
         ChatEntity::class,
         MessageEntity::class,
         AudioStreamEntity::class,
-        DailyInsightEntity::class
+        DailyInsightEntity::class,
+        UserProfileEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 abstract class TeleShieldDatabase : RoomDatabase() {
@@ -24,6 +26,7 @@ abstract class TeleShieldDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun audioStreamDao(): AudioStreamDao
     abstract fun insightDao(): InsightDao
+    abstract fun userProfileDao(): UserProfileDao
 
     companion object {
         @Volatile

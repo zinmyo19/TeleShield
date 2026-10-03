@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,15 +21,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
@@ -36,6 +40,8 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,9 +55,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +91,7 @@ fun AudioPlayerScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = LocalTeleShieldColors.current
-    val currentStream = playerState.currentStream ?: streams.firstOrNull()
+    val currentStream = playerState.currentStream
 
     Column(
         modifier = modifier
@@ -104,7 +114,7 @@ fun AudioPlayerScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Headphones,
+                        imageVector = if (currentStream?.isVideo == true) Icons.Default.LiveTv else Icons.Default.Headphones,
                         contentDescription = null,
                         tint = colors.primary,
                         modifier = Modifier.size(20.dp)
@@ -112,14 +122,15 @@ fun AudioPlayerScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (playerState.displayMode == PlayerDisplayMode.STREAM_LIVE)
-                            "Live Audio Stream" else "Encrypted Channels Library",
+                            (if (currentStream?.isVideo == true) "Watch Video Stream" else "Live Audio Stream")
+                        else "Media Channels & Streams",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
                 }
 
-                // The requested single-click command button
+                // The single-click command button
                 Button(
                     onClick = onToggleStreamLibraryView,
                     modifier = Modifier
@@ -202,24 +213,23 @@ fun LiveStreamPlayerView(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
+        contentPadding = PaddingValues(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            // Artwork & Cyber Waveform Visualizer Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("stream_player_card"),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = colors.surface),
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(stream.artworkColorHex))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Header Badges
@@ -235,7 +245,7 @@ fun LiveStreamPlayerView(
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "LOSSLESS 320 KBPS • E2E STREAM",
+                                text = if (stream.isVideo) "VIDEO STREAM • ${stream.videoResolution}" else "LOSSLESS 320 KBPS • E2E STREAM",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.secondary
@@ -251,56 +261,144 @@ fun LiveStreamPlayerView(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "${stream.listenersCount} Secure Listeners",
+                                text = if (stream.isVideo) "${stream.listenersCount} Watching Live" else "${stream.listenersCount} Secure Listeners",
                                 fontSize = 11.sp,
                                 color = colors.textSecondary
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Animated Cyber Waveform Visualizer
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(90.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.surfaceVariant.copy(alpha = 0.5f))
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
+                    // VIDEO CANVAS OR AUDIO WAVEFORM VISUALIZER
+                    if (stream.isVideo) {
+                        // 16:9 Video Canvas
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF0D141F), Color(0xFF05080E))
+                                    )
+                                )
+                                .border(1.dp, colors.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            playerState.waveformAmplitudes.forEachIndexed { index, amp ->
-                                val heightMultiplier = if (playerState.isPlaying) amp else 0.2f
-                                val barHeight by animateFloatAsState(
-                                    targetValue = (heightMultiplier * 70f).coerceAtLeast(6f),
-                                    animationSpec = tween(durationMillis = 200),
-                                    label = "bar_$index"
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .width(6.dp)
-                                        .height(barHeight.dp)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(
-                                            if (index % 2 == 0) colors.primary else colors.secondary
+                            // Video Stream Telemetry overlay
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color.Red.copy(alpha = 0.85f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "LIVE FEED",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White
                                         )
-                                )
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color.Black.copy(alpha = 0.7f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = stream.videoResolution,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.primary
+                                        )
+                                    }
+                                }
+
+                                // Center Live Video Animation Icon
+                                Box(
+                                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (playerState.isPlaying) Icons.Default.LiveTv else Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        tint = colors.primary.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(46.dp)
+                                    )
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "E2E Quantum Encrypted Relay",
+                                        fontSize = 9.sp,
+                                        color = colors.secondary
+                                    )
+                                    Text(
+                                        text = "60 FPS • 0 Drop",
+                                        fontSize = 9.sp,
+                                        color = colors.textMuted
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        // Cyber Audio Waveform Visualizer
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(90.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(colors.surfaceVariant.copy(alpha = 0.5f))
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                playerState.waveformAmplitudes.forEachIndexed { index, amp ->
+                                    val heightMultiplier = if (playerState.isPlaying) amp else 0.2f
+                                    val barHeight by animateFloatAsState(
+                                        targetValue = (heightMultiplier * 70f).coerceAtLeast(6f),
+                                        animationSpec = tween(durationMillis = 200),
+                                        label = "bar_$index"
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .width(6.dp)
+                                            .height(barHeight.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(
+                                                if (index % 2 == 0) colors.primary else colors.secondary
+                                            )
+                                    )
+                                }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = stream.title,
-                        fontSize = 18.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary,
                         textAlign = TextAlign.Center
@@ -315,7 +413,7 @@ fun LiveStreamPlayerView(
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Time & Slider
                     Slider(
@@ -348,79 +446,107 @@ fun LiveStreamPlayerView(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Playback Controls Row
+                    // Playback Controls (Play/Pause, Rewind, Forward, Speed, Offline)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Speed Cycle Button
-                        Box(
+                        Button(
+                            onClick = onCycleSpeed,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(colors.surfaceVariant)
                                 .tvFocusable(shape = RoundedCornerShape(8.dp), onClick = onCycleSpeed)
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                .testTag("stream_player_speed_button")
+                                .testTag("speed_cycle_button"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.surfaceVariant,
+                                contentColor = colors.textPrimary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Speed,
-                                    contentDescription = "Speed",
-                                    tint = colors.textSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "${playerState.playbackSpeed}x",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary
-                                )
-                            }
+                            Text(
+                                text = "${playerState.playbackSpeed}x",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
-                        // Main Large Play/Pause Button
+                        // Rewind 15s
+                        IconButton(
+                            onClick = {
+                                val newPos = (playerState.currentPositionSeconds - 15).coerceAtLeast(0)
+                                onSeekTo(newPos)
+                            },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .tvFocusable(shape = CircleShape, onClick = {
+                                    val newPos = (playerState.currentPositionSeconds - 15).coerceAtLeast(0)
+                                    onSeekTo(newPos)
+                                })
+                        ) {
+                            Text("-15s", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+
+                        // Primary Play / Pause Button (TV Remote & Touch prioritized)
                         Box(
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
                                 .background(colors.primary)
-                                .tvFocusable(
-                                    shape = CircleShape,
-                                    onClick = onTogglePlayPause
-                                )
-                                .testTag("stream_player_main_play_button"),
+                                .tvFocusable(shape = CircleShape, onClick = onTogglePlayPause)
+                                .clickable { onTogglePlayPause() }
+                                .testTag("player_play_pause_button"),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (playerState.isPlaying) "Pause" else "Play",
                                 tint = Color.Black,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(34.dp)
                             )
                         }
 
-                        // Offline Vault Cache Toggle
-                        Box(
+                        // Forward 15s
+                        IconButton(
+                            onClick = {
+                                val newPos = (playerState.currentPositionSeconds + 15).coerceAtMost(playerState.durationSeconds)
+                                onSeekTo(newPos)
+                            },
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (playerState.isOfflineCached) colors.secondary.copy(alpha = 0.2f) else colors.surfaceVariant)
+                                .size(44.dp)
+                                .tvFocusable(shape = CircleShape, onClick = {
+                                    val newPos = (playerState.currentPositionSeconds + 15).coerceAtMost(playerState.durationSeconds)
+                                    onSeekTo(newPos)
+                                })
+                        ) {
+                            Text("+15s", color = colors.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+
+                        // Offline Vault Cache Button
+                        Button(
+                            onClick = onToggleOfflineVault,
+                            modifier = Modifier
                                 .tvFocusable(shape = RoundedCornerShape(8.dp), onClick = onToggleOfflineVault)
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                .testTag("stream_player_offline_vault_button")
+                                .testTag("offline_cache_button"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (playerState.isOfflineCached) colors.secondary.copy(alpha = 0.2f) else colors.surfaceVariant,
+                                contentColor = if (playerState.isOfflineCached) colors.secondary else colors.textPrimary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = if (playerState.isOfflineCached) Icons.Default.DownloadDone else Icons.Default.CloudDownload,
-                                    contentDescription = "Offline Vault",
+                                    contentDescription = null,
                                     tint = if (playerState.isOfflineCached) colors.secondary else colors.textSecondary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (playerState.isOfflineCached) "Cached" else "Offline",
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (playerState.isOfflineCached) colors.secondary else colors.textPrimary
                                 )
@@ -468,6 +594,16 @@ fun StreamLibraryView(
     onUpgradeClick: () -> Unit
 ) {
     val colors = LocalTeleShieldColors.current
+    var selectedCategory by remember { mutableStateOf("ALL") }
+
+    val categories = listOf("ALL", "WATCH VIDEO", "AUDIO STREAMS", "PODCASTS")
+
+    val filteredStreams = when (selectedCategory) {
+        "WATCH VIDEO" -> streams.filter { it.isVideo }
+        "AUDIO STREAMS" -> streams.filter { !it.isVideo && it.streamType == "LIVE_STREAM" }
+        "PODCASTS" -> streams.filter { it.streamType == "PODCAST" }
+        else -> streams
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -515,13 +651,13 @@ fun StreamLibraryView(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Ad-Free Streams & Lossless FLAC",
+                                text = "Watch & Listen 100% Ad-Free",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.textPrimary
                             )
                             Text(
-                                text = "Current plan: ${subscriptionTier.title} • Tap for details",
+                                text = "4K encrypted video feeds & lossless FLAC audio",
                                 fontSize = 11.sp,
                                 color = colors.secondary
                             )
@@ -532,11 +668,11 @@ fun StreamLibraryView(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(colors.secondary)
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "TIERS",
-                            fontSize = 11.sp,
+                            text = subscriptionTier.title,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
@@ -545,34 +681,53 @@ fun StreamLibraryView(
             }
         }
 
+        // Media Category Filter Pills
         item {
-            Text(
-                text = "ENCRYPTED BROADCAST FEEDS (${streams.size})",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.textMuted,
-                letterSpacing = 1.sp
-            )
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(categories) { cat ->
+                    val isSelected = selectedCategory == cat
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (isSelected) colors.primary else colors.surfaceVariant)
+                            .border(1.dp, if (isSelected) colors.primary else colors.border, RoundedCornerShape(20.dp))
+                            .clickable { selectedCategory = cat }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = cat,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) Color.Black else colors.textPrimary
+                        )
+                    }
+                }
+            }
         }
 
-        items(streams, key = { it.id }) { item ->
-            val isCurrent = item.id == activeStreamId
+        // Stream Items List
+        items(filteredStreams, key = { it.id }) { stream ->
+            val isPlayingThis = activeStreamId == stream.id
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .tvFocusable(
                         shape = RoundedCornerShape(12.dp),
-                        onClick = { onSelectStream(item) }
+                        onClick = { onSelectStream(stream) }
                     )
-                    .testTag("stream_item_${item.id}"),
+                    .clickable { onSelectStream(stream) }
+                    .testTag("stream_item_${stream.id}"),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isCurrent) colors.surfaceVariant else colors.surface
+                    containerColor = if (isPlayingThis) colors.surfaceVariant else colors.surface
                 ),
                 border = androidx.compose.foundation.BorderStroke(
-                    width = if (isCurrent) 1.5.dp else 1.dp,
-                    color = if (isCurrent) colors.primary else colors.border
+                    width = if (isPlayingThis) 1.5.dp else 1.dp,
+                    color = if (isPlayingThis) colors.primary else colors.border
                 )
             ) {
                 Row(
@@ -583,16 +738,16 @@ fun StreamLibraryView(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(46.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(item.artworkColorHex).copy(alpha = 0.2f))
-                            .border(1.dp, Color(item.artworkColorHex), RoundedCornerShape(10.dp)),
+                            .background(Color(stream.artworkColorHex).copy(alpha = 0.2f))
+                            .border(1.dp, Color(stream.artworkColorHex), RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (item.streamType == "LIVE_STREAM") Icons.Default.Radio else Icons.Default.GraphicEq,
+                            imageVector = if (stream.isVideo) Icons.Default.LiveTv else (if (isPlayingThis) Icons.Default.GraphicEq else Icons.Default.Radio),
                             contentDescription = null,
-                            tint = Color(item.artworkColorHex),
+                            tint = Color(stream.artworkColorHex),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -600,61 +755,77 @@ fun StreamLibraryView(
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = item.title,
+                                text = stream.title,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.textPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f, fill = false)
                             )
-                            if (item.isPremiumOnly) {
+                            if (stream.isVideo) {
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
-                                        .background(colors.primary.copy(alpha = 0.2f))
-                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                        .background(Color(0xFFE53935))
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
                                 ) {
                                     Text(
-                                        text = "SHIELD+",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = colors.primary
+                                        text = stream.videoResolution,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(2.dp))
-
                         Text(
-                            text = item.channelOrArtist,
-                            fontSize = 12.sp,
+                            text = "${stream.channelOrArtist} • ${stream.category}",
+                            fontSize = 11.sp,
                             color = colors.textSecondary
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = item.category,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = colors.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "${item.listenersCount} listeners",
+                                text = if (stream.isVideo) "${stream.listenersCount} watching" else "${stream.listenersCount} listeners",
                                 fontSize = 10.sp,
                                 color = colors.textMuted
                             )
+                            if (stream.isPremiumOnly) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(colors.secondary.copy(alpha = 0.2f))
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "SHIELD+",
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.secondary
+                                    )
+                                }
+                            }
                         }
+                    }
+
+                    IconButton(
+                        onClick = { onSelectStream(stream) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isPlayingThis) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = "Play",
+                            tint = colors.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }

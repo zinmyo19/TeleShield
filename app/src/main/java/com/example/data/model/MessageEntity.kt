@@ -19,7 +19,9 @@ data class MessageEntity(
     val mediaType: String = "TEXT", // "TEXT", "AUDIO", "VOICE", "CIPHER_DOC"
     val mediaDurationSec: Int = 0,
     val audioPlayed: Boolean = false,
-    val encryptionCipher: String = "AES-256-GCM / Ephemeral Diffie-Hellman"
+    val encryptionCipher: String = "AES-256-GCM / Ephemeral Diffie-Hellman",
+    val encryptedPayload: String = "",
+    val integrityHmacHex: String = ""
 ) {
     fun getRemainingBurnSeconds(currentTime: Long): Int {
         if (selfDestructSeconds <= 0 || openedTimestamp <= 0L) return selfDestructSeconds

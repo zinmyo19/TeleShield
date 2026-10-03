@@ -56,7 +56,7 @@ data class NavItem(
 val NAV_ITEMS = listOf(
     NavItem(MainNavigationTab.CHATS, "Chats", Icons.Filled.ChatBubble, Icons.Outlined.ChatBubbleOutline, "nav_chats"),
     NavItem(MainNavigationTab.SECRET_VAULT, "Vault", Icons.Filled.Lock, Icons.Outlined.Lock, "nav_vault"),
-    NavItem(MainNavigationTab.PLAYER, "Player", Icons.Filled.PlayCircle, Icons.Outlined.PlayCircleOutline, "nav_player"),
+    NavItem(MainNavigationTab.PLAYER, "Watch Media", Icons.Filled.PlayCircle, Icons.Outlined.PlayCircleOutline, "nav_player"),
     NavItem(MainNavigationTab.INSIGHTS, "Insights", Icons.Filled.Insights, Icons.Outlined.Insights, "nav_insights"),
     NavItem(MainNavigationTab.PRIVACY, "Privacy", Icons.Filled.Security, Icons.Outlined.Security, "nav_privacy"),
     NavItem(MainNavigationTab.SUBSCRIPTION, "Premium", Icons.Filled.Star, Icons.Outlined.StarOutline, "nav_subscription")

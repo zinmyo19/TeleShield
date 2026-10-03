@@ -36,4 +36,10 @@ interface MessageDao {
 
     @Query("SELECT * FROM messages WHERE selfDestructSeconds > 0 AND openedTimestamp > 0 AND isDestroyed = 0")
     suspend fun getActiveBurnMessages(): List<MessageEntity>
+
+    @Query("SELECT COUNT(*) FROM messages WHERE isDestroyed = 0")
+    fun getActiveMessageCount(): Flow<Int>
+
+    @Query("DELETE FROM messages WHERE isDestroyed = 1")
+    suspend fun purgeDestroyedMessages(): Int
 }

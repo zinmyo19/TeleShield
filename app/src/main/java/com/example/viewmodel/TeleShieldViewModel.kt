@@ -6,6 +6,7 @@ import com.example.data.model.AudioStreamEntity
 import com.example.data.model.ChatEntity
 import com.example.data.model.DailyInsightEntity
 import com.example.data.model.MessageEntity
+import com.example.data.model.UserProfileEntity
 import com.example.data.repository.ActiveSession
 import com.example.data.repository.SubscriptionTier
 import com.example.data.repository.TeleShieldRepository
@@ -27,7 +28,7 @@ import kotlinx.coroutines.launch
 enum class MainNavigationTab(val label: String) {
     CHATS("Chats"),
     SECRET_VAULT("Secret Vault"),
-    PLAYER("Audio Stream"),
+    PLAYER("Watch Media"),
     INSIGHTS("Insights"),
     PRIVACY("Privacy & Security"),
     SUBSCRIPTION("Premium")
@@ -78,6 +79,12 @@ class TeleShieldViewModel(
     val playerState: StateFlow<PlayerState> = playerController.playerState
     val latestInsight: StateFlow<DailyInsightEntity?> = repository.latestInsight
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val userProfile: StateFlow<UserProfileEntity?> = repository.userProfile
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val activeMessageCount: StateFlow<Int> = repository.activeMessageCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val allAudioStreams: StateFlow<List<AudioStreamEntity>> = repository.allAudioStreams
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -224,5 +231,24 @@ class TeleShieldViewModel(
 
     fun togglePlayerStreamLibraryView() {
         playerController.toggleStreamLibraryView()
+    }
+
+    // Secure Profile & Database management
+    fun updateUserProfile(displayName: String, bio: String) {
+        viewModelScope.launch {
+            repository.updateUserProfile(displayName, bio)
+        }
+    }
+
+    fun rotateIdentityKey() {
+        viewModelScope.launch {
+            repository.rotateIdentityKey()
+        }
+    }
+
+    fun purgeChatHistory(chatId: Long) {
+        viewModelScope.launch {
+            repository.purgeChatHistory(chatId)
+        }
     }
 }
