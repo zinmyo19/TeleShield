@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <!-- Background -->
+    <path
+        android:fillColor="#0A0D14"
+        android:pathData="M0,0h320v180h-320z" />
+    <!-- Shield Outline -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M160,30 L210,55 L210,110 C210,138 185,155 160,165 C135,155 110,138 110,110 L110,55 Z" />
+    <path
+        android:fillColor="#0A0D14"
+        android:pathData="M160,38 L202,59 L202,108 C202,132 180,147 160,156 C140,147 118,132 118,108 L118,59 Z" />
+</vector>

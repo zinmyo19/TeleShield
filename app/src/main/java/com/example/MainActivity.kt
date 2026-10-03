@@ -73,15 +73,24 @@ class MainActivity : ComponentActivity() {
 
             // Real Android FLAG_SECURE enforcement for Screenshot & Screen Record Protection
             DisposableEffect(privacySettings.screenshotProtection) {
-                if (privacySettings.screenshotProtection) {
-                    window.setFlags(
-                        WindowManager.LayoutParams.FLAG_SECURE,
-                        WindowManager.LayoutParams.FLAG_SECURE
-                    )
-                } else {
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                try {
+                    if (privacySettings.screenshotProtection) {
+                        window.setFlags(
+                            WindowManager.LayoutParams.FLAG_SECURE,
+                            WindowManager.LayoutParams.FLAG_SECURE
+                        )
+                    } else {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    }
+                } catch (e: Exception) {
+                    // Safe fallback for virtual/streaming displays
                 }
-                onDispose {}
+                onDispose {
+                    try {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    } catch (e: Exception) {
+                    }
+                }
             }
 
             TeleShieldTheme(themeMode = themeMode) {
@@ -183,9 +192,8 @@ fun TeleShieldApp(viewModel: TeleShieldViewModel) {
                                     secretChats = filteredChats.filter { it.isSecretChat },
                                     onOpenChat = { chatId -> viewModel.openChat(chatId) },
                                     onNewSecretChatClick = { viewModel.toggleNewChatDialog(true) },
-                                    onInspectFingerprint = {
-                                        viewModel.openChat(it.id)
-                                        viewModel.toggleFingerprintDialog(true)
+                                    onInspectFingerprint = { chat ->
+                                        viewModel.inspectFingerprint(chat)
                                     }
                                 )
                             }
@@ -253,11 +261,14 @@ fun TeleShieldApp(viewModel: TeleShieldViewModel) {
     }
 
     // Modal Dialogs
-    if (isFingerprintDialogVisible && activeChat != null) {
+    val inspectingChat by viewModel.inspectingChat.collectAsState()
+    val chatForFingerprint = inspectingChat ?: activeChat
+
+    if (isFingerprintDialogVisible && chatForFingerprint != null) {
         EncryptionFingerprintDialog(
-            title = activeChat!!.title,
-            fingerprint = activeChat!!.encryptionFingerprint,
-            keyHex = activeChat!!.encryptionKeyHex,
+            title = chatForFingerprint.title,
+            fingerprint = chatForFingerprint.encryptionFingerprint,
+            keyHex = chatForFingerprint.encryptionKeyHex,
             onDismiss = { viewModel.toggleFingerprintDialog(false) }
         )
     }

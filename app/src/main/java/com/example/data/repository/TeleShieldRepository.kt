@@ -38,7 +38,7 @@ data class ActiveSession(
 )
 
 data class UserPrivacySettings(
-    val screenshotProtection: Boolean = true,
+    val screenshotProtection: Boolean = false, // Off by default to allow streaming emulator display
     val ghostMode: Boolean = true, // Hide online & last seen
     val incognitoKeyboard: Boolean = true,
     val forwardRestrictedByDefault: Boolean = true,
@@ -85,6 +85,8 @@ class TeleShieldRepository(
     }
 
     private suspend fun seedInitialDataIfEmpty() {
+        if (chatDao.getChatCount() > 0) return
+
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         insightDao.insertOrUpdate(
             DailyInsightEntity(

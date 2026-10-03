@@ -60,6 +60,9 @@ class TeleShieldViewModel(
     private val _isFingerprintDialogVisible = MutableStateFlow(false)
     val isFingerprintDialogVisible: StateFlow<Boolean> = _isFingerprintDialogVisible.asStateFlow()
 
+    private val _inspectingChat = MutableStateFlow<ChatEntity?>(null)
+    val inspectingChat: StateFlow<ChatEntity?> = _inspectingChat.asStateFlow()
+
     private val _isTimerDialogVisible = MutableStateFlow(false)
     val isTimerDialogVisible: StateFlow<Boolean> = _isTimerDialogVisible.asStateFlow()
 
@@ -188,6 +191,14 @@ class TeleShieldViewModel(
 
     fun toggleFingerprintDialog(show: Boolean) {
         _isFingerprintDialogVisible.value = show
+        if (!show) {
+            _inspectingChat.value = null
+        }
+    }
+
+    fun inspectFingerprint(chat: ChatEntity) {
+        _inspectingChat.value = chat
+        _isFingerprintDialogVisible.value = true
     }
 
     fun toggleTimerDialog(show: Boolean) {
